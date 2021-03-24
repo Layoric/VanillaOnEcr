@@ -92,16 +92,19 @@ jobs:
       - name: remote docker-compose up via ssh
         uses: appleboy/ssh-action@v0.1.4
         env:
-          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ env.AWS_REGION }}
+          ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          REGION: ${{ env.AWS_REGION }}
           ECR_ID: ${{ steps.login_ecr.outputs.registry }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USERNAME }}
           key: ${{ secrets.DEPLOY_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,ECR_ID
+          envs: ACCESS_KEY_ID,SECRET_ACCESS_KEY,REGION,ECR_ID
           script: |
+            export AWS_ACCESS_KEY_ID=$ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$SECRET_ACCESS_KEY
+            export AWS_REGION=$REGION
             aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $ECR_ID
             docker-compose -f ~/deploy/MyApp-docker-compose.yml up -d
