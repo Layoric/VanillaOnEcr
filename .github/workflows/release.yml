@@ -70,7 +70,7 @@ jobs:
           LETSENCRYPT_EMAIL: ${{ env.letsencrypt_email }}
         with:
           input: deploy/docker-compose-template.yml
-          output: deploy/VanillaOnEcr-docker-compose.yml
+          output: deploy/MyApp-docker-compose.yml
 
       - name: copy compose file via scp
         uses: appleboy/scp-action@v0.1.1
@@ -79,19 +79,23 @@ jobs:
           username: ${{ secrets.DEPLOY_USERNAME }}
           port: ${{ secrets.DEPLOY_PORT }}
           key: ${{ secrets.DEPLOY_KEY }}
-          source: "deploy/VanillaOnEcr-docker-compose.yml"
+          source: "deploy/MyApp-docker-compose.yml"
           target: "~/"
 
       - name: Set the value
         run: |
-          echo "GH_TOKEN=${{ secrets.CR_PAT }}" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
           echo "USERNAME=${{ secrets.DEPLOY_USERNAME }}" >> $GITHUB_ENV
 
       - name: remote docker-compose up via ssh
         uses: appleboy/ssh-action@v0.1.4
         env:
-          APPTOKEN: ${{ env.GH_TOKEN }}
-          USERNAME: ${{ env.USERNAME }}
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          ECR_ID: ${{ steps.login_ecr.outputs.registry }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USERNAME }}
@@ -99,5 +103,5 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           envs: APPTOKEN,USERNAME
           script: |
-            echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
-            docker-compose -f ~/deploy/VanillaOnEcr-docker-compose.yml up -d
+            aws ecr get-login-password --region $AWS_REGION | docker login -u AWS --password-stdin $ECR_ID
+            docker-compose -f ~/deploy/MyApp-docker-compose.yml up -d
